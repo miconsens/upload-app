@@ -1,0 +1,39 @@
+{
+  "name": "my-app",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "apollo-boost": "^0.4.0",
+    "express": "^4.16.4",
+    "graphql": "^14.3.1",
+    "minio": "^7.0.8",
+    "mongoose": "^5.5.10",
+    "multer": "^1.4.1",
+    "nodemon": "^1.19.0",
+    "ramda": "^0.26.1",
+    "react": "^16.8.6",
+    "react-apollo": "^2.5.6",
+    "react-dom": "^16.8.6",
+    "react-scripts": "0.9.x",
+    "semantic-ui-css": "^2.4.1",
+    "semantic-ui-react": "^0.87.1"
+  },
+  "devDependencies": {},
+  "nodemonConfig": {
+    "watch": [
+      "./server/"
+    ],
+    "ignore": [
+      "./server/uploadedFiles/"
+    ],
+    "delay": "2500"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject",
+    "server": "nodemon ./server/server.js"
+  },
+  "proxy": "http://localhost:4000"
+}
