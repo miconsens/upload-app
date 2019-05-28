@@ -1,14 +1,98 @@
 const express = require('express')
 const multer = require('multer')
 const minio = require('minio')
+const { gql, ApolloServer } = require('apollo-server');
 const app = express()
+const { find, filter } = require('lodash');
 const port = 4000
+const axios = require('axios');
 const upload = multer({dest: '/Users/micaela/Desktop/my-app/server/tmp'})
 const R= require('ramda')
 const mongoose = require('mongoose')
 mongoose.connect('mongodb://localhost/uploadapp', {useNewUrlParser: true});
 const db= mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error'));
+
+const typeDefs = gql`
+ type UploadedFile {
+   filename: String
+   bucketName: ID
+   objectName: ID
+ }
+
+ type User {
+   name: String
+   username: String
+   uploads: [UploadedFile]
+ }
+
+ type Query{
+   user(
+     username: String
+   ): User
+   uploads(
+     username: String
+   ): [UploadedFile]
+ }
+`;
+
+const resolvers = {
+  User: {
+    uploads: async ({name, username}, variables, {Upload}) => {
+      return await Upload.find({})
+     // return filter(uploads, { user: user.name });
+    },
+  },
+  Query: {
+    user: async (parent, {username}, context) => {
+      return {
+        name: 'dasd',
+        username: 'username'
+      }
+      //return context.Uploads.find(user, { id: args.id });
+    },
+    uploads: async (parent, {username}, {Upload}) => {
+      return await Upload.find({})
+      //return context.Users.find(uploads)
+    }
+  },
+};
+
+// DATABASE UPLOAD DOCUMENT SCHEMA
+const uploadSchema = new mongoose.Schema({
+  bucketName: {type: String, default: 'uploads'},
+  objectName: {type: mongoose.Schema.Types.ObjectId, auto: true},
+  filename: String
+})
+const Upload = mongoose.model('Upload', uploadSchema)
+
+const context = async ({req}) =>{
+  console.log('context being made')
+  return{
+    req,
+    Upload
+  }
+}
+
+const server = new ApolloServer(
+  {
+    typeDefs,
+    resolvers,
+    debug: true,
+    context
+  }
+)
+
+const serverOptions = {
+  cors: {
+    credentials: true,
+    origin: [`http://localhost:3000`]
+  },
+  port: 8000,
+  playground:"/gqlplayground",
+  endpoint: "/graphql",
+  subscriptions: '/graphql'
+}
 
 const minioClient = new minio.Client({
     endPoint: 'localhost',
@@ -23,24 +107,17 @@ minioClient.makeBucket('uploads', 'us-east-1', function(err) {
     if (err) return console.log(err)
     console.log('Bucket created successfully in "us-east-1".')
 })
+
 const expressPath = '/Users/micaela/Desktop/my-app/server'
 const minioPath = `${expressPath}/tmp/minio`
 
-// DATABASE UPLOAD DOCUMENT SCHEMA
-const uploadSchema = new mongoose.Schema({
-    bucketName: {type: String, default: 'uploads'},
-    objectName: {type: mongoose.Schema.Types.ObjectId, auto: true},
-    filename: String
-})
-const Upload = mongoose.model('Upload', uploadSchema)
+
 const fileNotUploaded = (file, allUploads) => (
     R.not(R.includes(
         R.prop('originalname', file),
         R.pluck('filename', allUploads)
     ))
 )
-
-
 
 app.get('/upload/all',
     async (req, res) => {
@@ -103,7 +180,10 @@ app.put('/upload', upload.single('uploadedFile'),
 db.once(
     'open',
     () => {
-        console.log('Database connection open')
-        app.listen(port, () => console.log(`Express server on ${port}!`))
+      console.log('Database connection open')
+      app.listen(port, () => console.log(`Express server on ${port}!`))
+      server.listen(serverOptions).then(({ url }) => {
+        console.log(`Server ready at ${url}`);
+      });
     }
 )
