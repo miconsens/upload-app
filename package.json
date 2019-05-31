@@ -5,6 +5,7 @@
   "dependencies": {
     "apollo-boost": "^0.4.0",
     "express": "^4.16.4",
+    "formik": "^1.5.7",
     "graphql": "^14.3.1",
     "minio": "^7.0.8",
     "mongoose": "^5.5.10",
@@ -16,7 +17,8 @@
     "react-dom": "^16.8.6",
     "react-scripts": "0.9.x",
     "semantic-ui-css": "^2.4.1",
-    "semantic-ui-react": "^0.87.1"
+    "semantic-ui-react": "^0.87.1",
+    "yup": "^0.27.0"
   },
   "devDependencies": {},
   "nodemonConfig": {
