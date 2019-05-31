@@ -21,56 +21,82 @@ const typeDefs = gql`
  }
 
  type User {
-   name: String
    username: String
+   userID: ID
    uploads: [UploadedFile]
  }
 
  type Query{
    user(
-     username: String
+     userID: String
    ): User
    uploads(
-     username: String
+     userID: String
    ): [UploadedFile]
+ }
+
+ type Mutation{
+   authenticate(
+     username: String
+     password: String
+   ): User
+   register(
+     username: String
+     password: String
+   ): User
  }
 `;
 
 const resolvers = {
   User: {
-    uploads: async ({name, username}, variables, {Upload}) => {
-      return await Upload.find({})
+    uploads: async ({userID}, variables, {Upload}) => {
+      console.log(userID)
+      return await Upload.find({bucketName: userID})
      // return filter(uploads, { user: user.name });
     },
   },
   Query: {
-    user: async (parent, {username}, context) => {
-      return {
-        name: 'dasd',
-        username: 'username'
-      }
+    user: async (parent, {userID}, {User}) => {
+      return await User.findOne({userID})
       //return context.Uploads.find(user, { id: args.id });
     },
-    uploads: async (parent, {username}, {Upload}) => {
-      return await Upload.find({})
+    uploads: async (parent, {userID}, {Upload}) => {
+      return await Upload.find({bucketName: userID})
       //return context.Users.find(uploads)
+    }
+  },
+  Mutation: {
+    authenticate: async (parent, {username, password}, {User}) =>{
+      return await User.find({username, password})
+    },
+    register: async (parent, {username, password}, {User}) =>{
+      const newUser = new User({ username, password});
+      return await newUser.save()
     }
   },
 };
 
 // DATABASE UPLOAD DOCUMENT SCHEMA
 const uploadSchema = new mongoose.Schema({
-  bucketName: {type: String, default: 'uploads'},
+  bucketName: {type: mongoose.Schema.Types.ObjectId}, // no auto since passed in from userID
   objectName: {type: mongoose.Schema.Types.ObjectId, auto: true},
   filename: String
 })
 const Upload = mongoose.model('Upload', uploadSchema)
 
+//DATABASE USER SCHEMA
+const userSchema = new mongoose.Schema({
+  username: {type: String},
+  userID: {type: mongoose.Schema.Types.ObjectId, auto: true},
+})
+
+const User = mongoose.model('User', userSchema)
+
 const context = async ({req}) =>{
-  console.log('context being made')
   return{
     req,
-    Upload
+    Upload,
+    User
   }
 }
 
@@ -102,6 +128,20 @@ const minioClient = new minio.Client({
      accessKey: 'AKIAIOSFODNN7EXAMPLE',
      secretKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'
 });
+
+minioClient.listBuckets(function(e, buckets) {
+  if (e) return console.log(e)
+  console.log('buckets :', buckets)
+})
+
+var objectsStream = minioClient.listObjectsV2('uploads', '', true,'')
+objectsStream.on('data', function(obj) {
+  console.log(obj)
+})
+objectsStream.on('error', function(e) {
+  console.log(e)
+})
+
   // Make a bucket called uploads.
 minioClient.makeBucket('uploads', 'us-east-1', function(err) {
     if (err) return console.log(err)
@@ -129,7 +169,7 @@ app.get('/upload/all',
 )
 
 app.get('/upload/download/:objectName',
-    async (req, res) => {
+    async (req, res, next) => {
         const {params: {objectName}} = req
         const uploadReference = await Upload.findOne({objectName})
         const {filename} = uploadReference;
