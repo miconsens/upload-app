@@ -6,7 +6,7 @@ import {Button, Segment, Header, Icon, Grid, Divider } from 'semantic-ui-react'
 import * as R from 'ramda'
 
 
-const App = () => {
+const App = ({setPageKey}) => {
     const [files, setFiles] = useState([])
     console.log(files);
     useEffect(
@@ -21,11 +21,12 @@ const App = () => {
         []
     )
     return (
-        <div>
+        <div style={{background: '#82E0AA'}}>
+        <Button size='medium' inverted floated='right' content='LOG-OUT' onClick={() => setPageKey('homePage')}/>
         <Segment  attached='bottom' size='massive' placeholder>
-            <Grid columns={2} stackable textAlign='center'>
+            <Grid columns={2} style={{ height: '90vh' }} stackable textAlign='center'>
                 <Divider hidden vertical centered='true'>
-                {<Button size='massive' animated='fade'  color='teal' as={'label'} htmlFor={'upload'}>
+                {<Button size='massive' animated='fade' style={{background:'#82E0AA', color:'#ffff'}} as={'label'} htmlFor={'upload'}>
                     <Button.Content visible>
                         CLICK TO UPLOAD
                     </Button.Content>
@@ -36,9 +37,9 @@ const App = () => {
                 </Divider>
                 <Grid.Row verticalAlign='top'>
                     <Grid.Column>
-                        <Header color='teal' icon>
+                        <Header style={{color:'#82E0AA'}} icon>
                             <br></br>
-                            <Icon color='teal' name='circle outline' />
+                            <Icon style={{color:'#82E0AA'}} name='circle outline' />
                             <br></br>
                             NUMBER OF UPLOADED FILES
                             <br></br><br></br>
@@ -46,16 +47,16 @@ const App = () => {
                         </Header>
                     </Grid.Column>
                     <Grid.Column>
-                        <Header color='teal' icon>
+                        <Header style={{color:'#82E0AA'}} icon>
                             <br></br>
-                            <Icon color='teal' name='circle' />
+                            <Icon style={{color:'#82E0AA'}} name='circle' />
                             <br></br>
                             LIST OF UPLOADED FILES
                             {R.map(
                                 ({objectName, filename}) => (
                                     <Segment clearing key={objectName}>
                                         {filename}
-                                        <Button floated='right' content='Download'
+                                        <Button style={{background:'#82E0AA', color:'#ffff'}} floated='right' content='Download'
                                             as='a'
                                             target="_blank"
                                             download
