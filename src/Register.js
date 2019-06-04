@@ -37,7 +37,7 @@ const RegisterSchema = Yup.object().shape({
     .required('Required')
 })
 
-const Register = ({result, setPageKey, ...props}) => {
+const Register = ({result, setPageKey, setUser, ...props}) => {
   const {
     values,
     touched,
@@ -46,7 +46,7 @@ const Register = ({result, setPageKey, ...props}) => {
     handleBlur,
     handleSubmit,
   } = props;
-  console.log('values', values)
+  // console.log('values', values)
   const isError = R.prop(R.__, errors)
   const isTouched = R.prop(R.__, touched)
   const isInvalid = R.both(isError, isTouched)
@@ -56,13 +56,16 @@ const Register = ({result, setPageKey, ...props}) => {
   const invalidPassword = isInvalid('password')
   const invalidPasswordConfirmation = isInvalid('passwordConfirm')
 
-
-  // if the graphql query result has a username, change pages 
-  //(as the graphql query will only return a user if the inputted username and password do not match a user in the db)
+  // Curried function to get user from graphql
+  const userFromResult = R.path(['data','register'])
+  // if the graphql query result is not null, change pages 
+  //(as the graphql query will only return a user if a new user has been successfully created
   useEffect(
     () => {
-      R.compose(R.not, R.isNil, R.path(['data','register','username']))(result)
-       && setPageKey('main')
+      if (R.compose(R.not, R.isNil, userFromResult)(result)) {
+        setUser(userFromResult(result))
+        setPageKey('main')
+      }
     },
     [result]
   )
@@ -165,21 +168,20 @@ export default R.compose(
     validationSchema: RegisterSchema,
   
     handleSubmit: async ({username,password, passwordConfirm}, {props: {register}}) => {
-      console.log('Register submit', register, username, password)
+      // console.log('Register submit', register, username, password)
       const isValid = await RegisterSchema.isValid({
         username,
         password,
         passwordConfirm
       })
-      console.log('isValid', isValid)
+      // console.log('isValid', isValid)
       //if the user has inputted a valid username and password try to find that username with that password in the db
       //using graphql query 'authenticate'
       if (isValid){
         await register({variables:{username,password}})
         if (register.data){
-        console.log('register', register.data.username)
+        // console.log('register', register.data.username)
         }
-        else console.log('input new username this one is taken')
       }
     },
   

@@ -21,6 +21,7 @@ const AUTHENTICATE_MUTATION = gql`
       password: $password
     ) {
       username
+      userID
     }
   }
 `;
@@ -36,7 +37,8 @@ const AuthenticationSchema = Yup.object().shape({
 })
 
 const Authenticate = ({
-   result, setPageKey, ...props}) => {
+  result, setPageKey, setUser, user, ...props
+}) => {
   const {
     values,
     touched,
@@ -45,13 +47,16 @@ const Authenticate = ({
     handleBlur,
     handleSubmit,
   } = props;
-
-  // if the graphql query result has a username, change pages 
+  // Curried function to get user from graphql
+  const userFromResult = R.path(['data','authenticate'])
+  // if the graphql query result is not null, change pages 
   //(as the graphql query will only return a user if the inputted username and password match a user in the db)
   useEffect(
     () => {
-      R.compose(R.not, R.isNil, R.path(['data','authenticate','username']))(result)
-      && setPageKey('main')
+      if (R.compose(R.not, R.isNil, userFromResult)(result)) {
+        setUser(userFromResult(result))
+        setPageKey('main')
+      }
     },
     [result]
   )
@@ -114,6 +119,11 @@ const Authenticate = ({
            onClick={() => setPageKey('register')}
         />
         </Segment>
+            { R.prop('called', result) && R.prop('error', result) &&
+              <Message negative>
+                The username or password you have entered is invalid. 
+              </Message>
+            }
       </Grid.Column>
     </Grid>
   )
@@ -144,7 +154,7 @@ export default R.compose(
     validationSchema: AuthenticationSchema,
 
     handleSubmit: async ({username,password}, {props: {authenticate}}) => {
-      console.log('Authentication submit', authenticate, username, password)
+      // console.log('Authentication submit', authenticate, username, password)
       const isValid = await AuthenticationSchema.isValid({
          username,
          password
