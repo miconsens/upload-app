@@ -1,7 +1,7 @@
 const express = require('express')
 const multer = require('multer')
 const minio = require('minio')
-const { gql, ApolloServer } = require('apollo-server');
+const { gql, ApolloServer, ApolloError } = require('apollo-server');
 const app = express()
 const { find, filter } = require('lodash');
 const port = 4000
@@ -67,11 +67,18 @@ const resolvers = {
   },
   Mutation: {
     authenticate: async (parent, {username, password}, {User}) =>{
-      return await User.find({username, password})
+      console.log('auth', username, password)
+      return await User.findOne({username, password})
     },
     register: async (parent, {username, password}, {User}) =>{
-      const newUser = new User({ username, password});
-      return await newUser.save()
+      const existing =  await User.findOne({username});
+      if (!existing){
+        const newUser = new User({ username, password});
+        console.log('New user');
+        return await newUser.save()
+      } else {
+        throw new ApolloError('User already exists')
+      }
     }
   },
 };
@@ -87,6 +94,7 @@ const Upload = mongoose.model('Upload', uploadSchema)
 //DATABASE USER SCHEMA
 const userSchema = new mongoose.Schema({
   username: {type: String},
+  password: {type: String},
   userID: {type: mongoose.Schema.Types.ObjectId, auto: true},
 })
 
@@ -221,6 +229,7 @@ db.once(
     'open',
     () => {
       console.log('Database connection open')
+      // START SERVICES
       app.listen(port, () => console.log(`Express server on ${port}!`))
       server.listen(serverOptions).then(({ url }) => {
         console.log(`Server ready at ${url}`);
