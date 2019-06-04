@@ -24,20 +24,21 @@ const client = new ApolloClient({
   link
 })
 
-const USER_QUERY = gql`
-  {
-    uploads (userID:"5ced58bc6ac1cfab2a84b89a"){
-      filename
-    }
-  }
-`;
+// const USER_QUERY = gql`
+//   {
+//     uploads (userID:"5ced58bc6ac1cfab2a84b89a"){
+//       filename
+//     }
+//   }
+// `;
 
-//Running our query outside of React
-client.query({
-  query: USER_QUERY
-}).then(res => console.log(res))
+// //Running our query outside of React
+// client.query({
+//   query: USER_QUERY
+// }).then(res => console.log(res))
 
 const Router = () => {
+  const [user, setUser] = useState(null)
   const [pageKey, setPageKey] = useState('homePage')
   const isPageKey = R.equals(pageKey)
   // HOC for passing pageKey
@@ -46,21 +47,32 @@ const Router = () => {
     // ... that takes arguments `setPageKey` and `WrappedComponent`
     (setPageKey, WrappedComponent) => (
       // ... and returns another component with `setPageKey` passed as a prop to `WrappedComponent`
-      wrappedComponentProps => <WrappedComponent {...wrappedComponentProps} setPageKey={setPageKey} />
+      wrappedComponentProps => <WrappedComponent {...wrappedComponentProps} setPageKey={setPageKey}/>
     )
   )(setPageKey)
 
-  return (
-    isPageKey('main') ? withSetPageKey(App)
-    : isPageKey('authenticate') ? withSetPageKey(Authenticate)
-    : isPageKey('register') ? withSetPageKey(Register)
-    : withSetPageKey(HomePage)
-  )()
+  const withUser = R.curry(
+    (user, setUser, WrappedComponent) =>(
+      wrappedComponentProps => <WrappedComponent {...wrappedComponentProps} user={user} setUser={setUser}/>
+    )
+  )(user, setUser)
+
+  const CurrentComponent = R.compose(
+    withUser,
+    withSetPageKey,
+  )(
+    isPageKey('main') ? App
+    : isPageKey('authenticate') ? Authenticate
+    : isPageKey('register') ? Register
+    : HomePage
+  )
+
+  return <CurrentComponent />
 }
 
 ReactDOM.render(
   <ApolloProvider client={client}>
-  <Router/>
+  <Router />
   </ApolloProvider>,
   document.getElementById('root')
 );
