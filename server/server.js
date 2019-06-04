@@ -50,7 +50,7 @@ const typeDefs = gql`
 const resolvers = {
   User: {
     uploads: async ({userID}, variables, {Upload}) => {
-      console.log(userID)
+      // console.log(userID)
       return await Upload.find({bucketName: userID})
      // return filter(uploads, { user: user.name });
     },
@@ -67,15 +67,25 @@ const resolvers = {
   },
   Mutation: {
     authenticate: async (parent, {username, password}, {User}) =>{
-      console.log('auth', username, password)
-      return await User.findOne({username, password})
+      // console.log('auth', username, password)
+      const returningUser = await User.findOne({username, password})
+      if (!returningUser){
+        throw new ApolloError('Username or password is invalid')
+      }
+      return returningUser
     },
     register: async (parent, {username, password}, {User}) =>{
       const existing =  await User.findOne({username});
       if (!existing){
         const newUser = new User({ username, password});
-        console.log('New user');
-        return await newUser.save()
+        // console.log('New user');
+        const {userID} = await newUser.save()
+        // Make a bucket with the user's ID.
+        minioClient.makeBucket(`${userID}`, 'us-east-1', function(err) {
+          if (err) return console.log(err)
+          console.log('Users bucket created successfully in "us-east-1".')
+        })
+        return newUser
       } else {
         throw new ApolloError('User already exists')
       }
@@ -150,12 +160,6 @@ objectsStream.on('error', function(e) {
   console.log(e)
 })
 
-  // Make a bucket called uploads.
-minioClient.makeBucket('uploads', 'us-east-1', function(err) {
-    if (err) return console.log(err)
-    console.log('Bucket created successfully in "us-east-1".')
-})
-
 const expressPath = '/Users/micaela/Desktop/my-app/server'
 const minioPath = `${expressPath}/tmp/minio`
 
@@ -170,7 +174,7 @@ const fileNotUploaded = (file, allUploads) => (
 app.get('/upload/all',
     async (req, res) => {
         const uploads = await Upload.find({})
-        console.log(uploads)
+        // console.log(uploads)
         res.json(uploads)
         //res.sendStatus(200)
     }
@@ -229,6 +233,9 @@ db.once(
     'open',
     () => {
       console.log('Database connection open')
+      // DROP DATABASES
+      User.deleteMany({})
+      Upload.deleteMany({})
       // START SERVICES
       app.listen(port, () => console.log(`Express server on ${port}!`))
       server.listen(serverOptions).then(({ url }) => {
