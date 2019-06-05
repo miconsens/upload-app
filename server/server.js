@@ -1,59 +1,61 @@
 const express = require('express')
 const multer = require('multer')
-const minio = require('minio')
+//const minio = require('minio')
 const { ApolloServer, ApolloError} = require('apollo-server');
 const {Upload, User, db} = require('./mongoSchema');
+const {minioClient} = require('./minioClient')
+const {resolvers} = require('./resolvers')
 const {typeDefs} = require('./typeDefs');
 const app = express()
 const port = 4000
 const upload = multer({dest: '/Users/micaela/Desktop/my-app/server/tmp'})
 const R= require('ramda')
 
-const resolvers = {
-  User: {
-    uploads: async ({userID}, variables, {Upload}) => {
-      // console.log(userID)
-      return await Upload.find({bucketName: userID})
-     // return filter(uploads, { user: user.name });
-    },
-  },
-  Query: {
-    user: async (parent, {userID}, {User}) => {
-      return await User.findOne({userID})
-      //return context.Uploads.find(user, { id: args.id });
-    },
-    uploads: async (parent, {userID}, {Upload}) => {
-      return await Upload.find({bucketName: userID})
-      //return context.Users.find(uploads)
-    }
-  },
-  Mutation: {
-    authenticate: async (parent, {username, password}, {User}) =>{
-      // console.log('auth', username, password)
-      const returningUser = await User.findOne({username, password})
-      if (!returningUser){
-        throw new ApolloError('Username or password is invalid')
-      }
-      return returningUser
-    },
-    register: async (parent, {username, password}, {User}) =>{
-      const existing =  await User.findOne({username});
-      if (!existing){
-        const newUser = new User({ username, password});
-        // console.log('New user');
-        const {userID} = await newUser.save()
-        // Make a bucket with the user's ID.
-        minioClient.makeBucket(`${userID}`, 'us-east-1', function(err) {
-          if (err) return console.log(err)
-          console.log('Users bucket created successfully in "us-east-1".')
-        })
-        return newUser
-      } else {
-        throw new ApolloError('User already exists')
-      }
-    }
-  },
-};
+// const resolvers = {
+//   User: {
+//     uploads: async ({userID}, variables, {Upload}) => {
+//       // console.log(userID)
+//       return await Upload.find({bucketName: userID})
+//      // return filter(uploads, { user: user.name });
+//     },
+//   },
+//   Query: {
+//     user: async (parent, {userID}, {User}) => {
+//       return await User.findOne({userID})
+//       //return context.Uploads.find(user, { id: args.id });
+//     },
+//     uploads: async (parent, {userID}, {Upload}) => {
+//       return await Upload.find({bucketName: userID})
+//       //return context.Users.find(uploads)
+//     }
+//   },
+//   Mutation: {
+//     authenticate: async (parent, {username, password}, {User}) =>{
+//       // console.log('auth', username, password)
+//       const returningUser = await User.findOne({username, password})
+//       if (!returningUser){
+//         throw new ApolloError('Username or password is invalid')
+//       }
+//       return returningUser
+//     },
+//     register: async (parent, {username, password}, {User}) =>{
+//       const existing =  await User.findOne({username});
+//       if (!existing){
+//         const newUser = new User({ username, password});
+//         // console.log('New user');
+//         const {userID} = await newUser.save()
+//         // Make a bucket with the user's ID.
+//         minioClient.makeBucket(`${userID}`, 'us-east-1', function(err) {
+//           if (err) return console.log(err)
+//           console.log('Users bucket created successfully in "us-east-1".')
+//         })
+//         return newUser
+//       } else {
+//         throw new ApolloError('User already exists')
+//       }
+//     }
+//   },
+// };
 
 const context = async ({req}) =>{
   return{
@@ -83,14 +85,14 @@ const serverOptions = {
   subscriptions: '/graphql'
 }
 
-const minioClient = new minio.Client({
-  endPoint: 'localhost',
-  port: 9000,
-  useSSL: false,
-  // CHANGE THESE WHEN RUNNING MINIO FROM DOCKER
-   accessKey: 'AKIAIOSFODNN7EXAMPLE',
-   secretKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'
-});
+// const minioClient = new minio.Client({
+//   endPoint: 'localhost',
+//   port: 9000,
+//   useSSL: false,
+//   // CHANGE THESE WHEN RUNNING MINIO FROM DOCKER
+//    accessKey: 'AKIAIOSFODNN7EXAMPLE',
+//    secretKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'
+// });
 
 minioClient.listBuckets(function(e, buckets) {
   if (e) return console.log(e)
