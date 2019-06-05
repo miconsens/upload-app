@@ -1,51 +1,13 @@
 const express = require('express')
 const multer = require('multer')
 const minio = require('minio')
-const { gql, ApolloServer, ApolloError } = require('apollo-server');
+const { ApolloServer, ApolloError} = require('apollo-server');
+const {Upload, User, db} = require('./mongoSchema');
+const {typeDefs} = require('./typeDefs');
 const app = express()
-const { find, filter } = require('lodash');
 const port = 4000
-const axios = require('axios');
 const upload = multer({dest: '/Users/micaela/Desktop/my-app/server/tmp'})
 const R= require('ramda')
-const mongoose = require('mongoose')
-mongoose.connect('mongodb://localhost/uploadapp', {useNewUrlParser: true});
-const db= mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error'));
-
-const typeDefs = gql`
- type UploadedFile {
-   filename: String
-   bucketName: ID
-   objectName: ID
- }
-
- type User {
-   username: String
-   userID: ID
-   uploads: [UploadedFile]
- }
-
- type Query{
-   user(
-     userID: String
-   ): User
-   uploads(
-     userID: String
-   ): [UploadedFile]
- }
-
- type Mutation{
-   authenticate(
-     username: String
-     password: String
-   ): User
-   register(
-     username: String
-     password: String
-   ): User
- }
-`;
 
 const resolvers = {
   User: {
@@ -93,23 +55,6 @@ const resolvers = {
   },
 };
 
-// DATABASE UPLOAD DOCUMENT SCHEMA
-const uploadSchema = new mongoose.Schema({
-  bucketName: {type: mongoose.Schema.Types.ObjectId}, // no auto since passed in from userID
-  objectName: {type: mongoose.Schema.Types.ObjectId, auto: true},
-  filename: String
-})
-const Upload = mongoose.model('Upload', uploadSchema)
-
-//DATABASE USER SCHEMA
-const userSchema = new mongoose.Schema({
-  username: {type: String},
-  password: {type: String},
-  userID: {type: mongoose.Schema.Types.ObjectId, auto: true},
-})
-
-const User = mongoose.model('User', userSchema)
-
 const context = async ({req}) =>{
   return{
     req,
@@ -139,12 +84,12 @@ const serverOptions = {
 }
 
 const minioClient = new minio.Client({
-    endPoint: 'localhost',
-    port: 9000,
-    useSSL: false,
-    // CHANGE THESE WHEN RUNNING MINIO FROM DOCKER
-     accessKey: 'AKIAIOSFODNN7EXAMPLE',
-     secretKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'
+  endPoint: 'localhost',
+  port: 9000,
+  useSSL: false,
+  // CHANGE THESE WHEN RUNNING MINIO FROM DOCKER
+   accessKey: 'AKIAIOSFODNN7EXAMPLE',
+   secretKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'
 });
 
 minioClient.listBuckets(function(e, buckets) {
@@ -152,7 +97,7 @@ minioClient.listBuckets(function(e, buckets) {
   console.log('buckets :', buckets)
 })
 
-var objectsStream = minioClient.listObjectsV2('uploads', '', true,'')
+var objectsStream = minioClient.listObjectsV2('5cf69f0c3d57a51cba9aece3', '', true,'')
 objectsStream.on('data', function(obj) {
   console.log(obj)
 })
@@ -160,8 +105,6 @@ objectsStream.on('error', function(e) {
   console.log(e)
 })
 
-const expressPath = '/Users/micaela/Desktop/my-app/server'
-const minioPath = `${expressPath}/tmp/minio`
 
 
 const fileNotUploaded = (file, allUploads) => (
@@ -184,13 +127,16 @@ app.get('/upload/download/:objectName',
     async (req, res, next) => {
         const {params: {objectName}} = req
         const uploadReference = await Upload.findOne({objectName})
-        const {filename} = uploadReference;
-        res.download(`${minioPath}/${filename}`, (err)=>{
-            if (err) {
-                next(err);
-              } else {
-                console.log('Sent:', filename)
-              }
+        const {filename, bucketName} = uploadReference;
+
+        minioClient.getObject(`${bucketName}`, `${objectName}`, function(err, dataStream) {
+          if (err) {
+            return console.log(err)
+          }
+          res.set({
+            'Content-Disposition': `attachment; filename=${filename}`
+          });
+          dataStream.pipe(res)
         })
 })
 
@@ -199,32 +145,22 @@ app.put('/upload', upload.single('uploadedFile'),
     async (req, res, next) => {
         const {file} = req
         const {originalname} = file;
-        const upload = new Upload({filename: originalname})
+        const upload = new Upload({bucketName: '5cf69f0c3d57a51cba9aece3', filename: originalname})
         const allUploads = await Upload.find({})
-        // console.log(allUploads)
+        // fileNotUploaded needs to be refactored to account for the userID bucketName
         if (fileNotUploaded(file, allUploads)) {
             const {bucketName, objectName, filename} = await upload.save()
-            console.log(`${objectName}`)
+            console.log('UPLOADING FILE', bucketName, objectName)
             const metaData = { 
                 'Content-Type': 'application/octet-stream',
                 'X-Amz-Meta-Testing': 1234,
                 'example': 5678
             }
             // Using fPutObject API upload your file to the bucket
-            minioClient.fPutObject(bucketName, `${objectName}`, file.path, metaData, function(err, etag) {
+            minioClient.fPutObject(`${bucketName}`, `${objectName}`, file.path, metaData, function(err, etag) {
                 if (err) return console.log(err, etag)
                 console.log('File uploaded successfully.')
-                // Publish to upload notification channel when MinIO done
-                // Do this for each file you need
-                minioClient.fGetObject(bucketName, `${objectName}`, `${minioPath}/${filename}`,
-                    err => {
-                        if (err) {return console.log(err)}
-                        console.log('File successfully downloaded')
-                        //session.publish('uploads.upload', [], {uploadedFilePath: etag})
-                    }
-                )
             })
-            // console.log(file);
         }
         res.sendStatus(200);
     }
@@ -243,3 +179,7 @@ db.once(
       });
     }
 )
+
+module.exports={
+  minioClient
+}
