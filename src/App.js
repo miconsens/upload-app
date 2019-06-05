@@ -35,7 +35,7 @@ const UploadsList = ({
                             {filename}
                             <Button style={{background:'#82E0AA', color:'#ffff'}} floated='right' content='Download'
                                 as='a'
-                                target="_blank"
+                                // target="_blank"
                                 download
                                 href={`http://localhost:4000/upload/download/${objectName}`}
                             />
@@ -51,17 +51,17 @@ const UploadsList = ({
 
 const App = ({setPageKey, user}) => {
     const [files, setFiles] = useState([])
-    useEffect(
-         () => {
-            const fetchUploads = async () => {
-                const uploads = await fetch('/upload/all')
-                const data = await uploads.json()
-                setFiles(data)
-            }
-            fetchUploads()
-        }, 
-        []
-    )
+    // useEffect(
+    //      () => {
+    //         const fetchUploads = async () => {
+    //             const uploads = await fetch('/upload/all')
+    //             const data = await uploads.json()
+    //             setFiles(data)
+    //         }
+    //         fetchUploads()
+    //     }, 
+    //     []
+    // )
     return (
         <div style={{background: '#82E0AA'}}>
         <Button
@@ -122,7 +122,7 @@ const App = ({setPageKey, user}) => {
             </Grid>
             <input hidden id={'upload'} type={'file'} 
                 onChange={(event) => {
-                    const file = R.head(event.target.files)
+                    const file = R.compose(R.head, R.path(['target', 'files']))(event)
                     // Send file to minio
                    const xhr = new XMLHttpRequest ()
                    xhr.open('PUT', 'http://localhost:4000/upload', true)
