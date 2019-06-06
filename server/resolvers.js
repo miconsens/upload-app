@@ -1,5 +1,6 @@
 const {ApolloError} = require('apollo-server');
 const {minioClient} = require('./minioClient')
+const R= require('ramda');
 
 const resolvers = {
     User: {
@@ -43,6 +44,22 @@ const resolvers = {
         } else {
           throw new ApolloError('User already exists')
         }
+        
+      },
+      createUpload: async (parent, {userID, file}, {Upload}) =>{
+        console.log(userID, file)
+        const {filename, mimetype, encoding, createReadStream} = await file
+        const stream = createReadStream()
+        console.log('this is stream', stream)
+        const newUpload = new Upload({ bucketName: userID, filename});
+        const {objectName} = await newUpload.save()
+        minioClient.putObject(`${userID}`,`${objectName}`, stream, function(err, etag) {
+          if (err) {
+            return console.log(err)
+          }
+          console.log("ETAG", etag)
+        })
+        return null
       }
     },
   };
