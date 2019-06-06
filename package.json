@@ -1,10 +1,14 @@
 {
   "name": "my-app",
+  "jest": {
+    "verbose": true
+  },
   "version": "0.1.0",
   "private": true,
   "dependencies": {
     "apollo-boost": "^0.4.0",
     "apollo-client": "^2.6.0",
+    "apollo-upload-client": "^10.0.1",
     "express": "^4.16.4",
     "formik": "^1.5.7",
     "graphql": "^14.3.1",
@@ -18,12 +22,20 @@
     "react": "^16.8.6",
     "react-apollo": "^2.5.6",
     "react-dom": "^16.8.6",
+    "react-dropzone": "^10.1.5",
     "react-scripts": "0.9.x",
     "semantic-ui-css": "^2.4.1",
     "semantic-ui-react": "^0.87.1",
     "yup": "^0.27.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@babel/preset-env": "^7.4.5",
+    "@babel/preset-react": "^7.0.0",
+    "@shelf/jest-mongodb": "^1.0.1",
+    "babel-jest": "^24.8.0",
+    "jest": "^24.8.0",
+    "react-test-renderer": "^16.8.6"
+  },
   "nodemonConfig": {
     "watch": [
       "./server/"
@@ -36,7 +48,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
+    "test": "jest",
     "eject": "react-scripts eject",
     "server": "nodemon ./server/server.js"
   },
