@@ -1,30 +1,45 @@
 import React, {useState, useEffect} from 'react'
 import 'semantic-ui-css/semantic.min.css'
 import {Button, Segment, Header, Icon, Grid, Divider } from 'semantic-ui-react'
+import Dropzone from 'react-dropzone'
 
 
 import * as R from 'ramda'
 
-import {Query} from 'react-apollo'
+import {Query, Mutation} from 'react-apollo'
 
 import gql from 'graphql-tag'
 
-const USER_UPLOADS = gql`{
-    user (userID:"5cf69f0c3d57a51cba9aece3"){
-        username
-        uploads{
-            filename
-            objectName
-            bucketName
-        }
-    }   
-}
+const USER_UPLOADS = gql`
+    query userDetails($userID: ID) {
+        user(userID: $userID) {
+            username
+            uploads {
+                filename
+                objectName
+                bucketName
+            }
+        }   
+    }
 `
+const CREATE_UPLOAD_MUTATION = gql`
+  mutation createUpload(
+    $file: Upload!
+    $userID: ID
+  ) {
+    createUpload(
+      file: $file
+      userID: $userID
+    ) {
+      filename
+    }
+  }
+`;
 
 const UploadsList = ({
     user
 }) => (
-    <Query query={USER_UPLOADS} skip={R.isNil(user)}>
+    <Query query={USER_UPLOADS} skip={R.isNil(user)} variables={{userID: R.prop('userID', user)}}>
     {
         ({data: {user}, error, loading}) => (
             !R.isNil(user) &&
@@ -49,7 +64,7 @@ const UploadsList = ({
     </Query>
 )
 
-const App = ({setPageKey, user}) => {
+const App = ({setPageKey, user, result, createUpload}) => {
     const [files, setFiles] = useState([])
     // useEffect(
     //      () => {
@@ -62,6 +77,7 @@ const App = ({setPageKey, user}) => {
     //     }, 
     //     []
     // )
+    const {userID} = user
     return (
         <div style={{background: '#82E0AA'}}>
         <Button
@@ -75,14 +91,22 @@ const App = ({setPageKey, user}) => {
         <Segment  attached='bottom' size='massive' placeholder>
             <Grid columns={2} style={{ height: '90vh' }} stackable textAlign='center'>
                 <Divider hidden vertical centered='true'>
-                {<Button size='massive' animated='fade' style={{background:'#82E0AA', color:'#ffff'}} as={'label'} htmlFor={'upload'}>
+                {/* {<Button type ='submit' onClick={handleClick} size='massive' animated='fade' style={{background:'#82E0AA', color:'#ffff'}} as={'label'} htmlFor={'upload'}>
                     <Button.Content visible>
                         CLICK TO UPLOAD
                     </Button.Content>
                     <Button.Content hidden>
                         <Icon name='upload' />
                     </Button.Content>
-                </Button>}
+                </Button>} */}
+                <Dropzone onDrop={(files)=> createUpload({variables: {userID, file: R.head(files)}})}>
+                {({getRootProps, getInputProps}) => (
+                    <div {...getRootProps()}>
+                    <p>Drop files here, or click to select files</p>
+                    <input {...getInputProps()} />
+                    </div>
+                )}
+                </Dropzone>
                 </Divider>
                 <Grid.Row verticalAlign='top'>
                     <Grid.Column>
@@ -120,28 +144,40 @@ const App = ({setPageKey, user}) => {
                     </Grid.Column>
                 </Grid.Row>
             </Grid>
-            <input hidden id={'upload'} type={'file'} 
+            {/* <input hidden id={'upload'} type={'file'} 
                 onChange={(event) => {
                     const file = R.compose(R.head, R.path(['target', 'files']))(event)
                     // Send file to minio
-                   const xhr = new XMLHttpRequest ()
-                   xhr.open('PUT', 'http://localhost:4000/upload', true)
-                   xhr.setRequestHeader('Access-Control-Allow-Origin', '*')
-                //    xhr.withCredentials = true
-                   const formData = new FormData()
-                   formData.append('uploadedFile', file)
-                   xhr.send(formData)
+                //    const xhr = new XMLHttpRequest ()
+                //    xhr.open('PUT', 'http://localhost:4000/upload', true)
+                //    xhr.setRequestHeader('Access-Control-Allow-Origin', '*')
+                // //    xhr.withCredentials = true
+                //    const formData = new FormData()
+                //    formData.append('uploadedFile', file)
+                //    xhr.send(formData)
                    xhr.onload = () => {
                     //    if (xhr.status == 200) {
 
                     //    }
                    }
                    //console.log(event.target.files)
-                }}
-                />
+                }} */}
         </Segment>
         </div>
         )
     }
 
-export default App
+const withMutation = (
+    WrappedComponent => (
+        props => (
+        <Mutation mutation={CREATE_UPLOAD_MUTATION}>
+        {
+            (createUpload, result) => (
+            <WrappedComponent {...props} createUpload={createUpload} result={result}/>
+            )
+        }
+        </Mutation>      
+        )
+    )
+    )
+export default withMutation(App)
