@@ -7,6 +7,12 @@ type UploadedFile {
   objectName: ID
 }
 
+type File {
+  filename: String!
+  mimetype: String!
+  encoding: String!
+}
+
 type User {
   username: String
   userID: ID
@@ -15,10 +21,10 @@ type User {
 
 type Query{
   user(
-    userID: String
+    userID: ID
   ): User
   uploads(
-    userID: String
+    userID: ID
   ): [UploadedFile]
 }
 
@@ -31,6 +37,14 @@ type Mutation{
     username: String
     password: String
   ): User
+  createUpload(
+    file: Upload!
+    userID: ID 
+  ): File
+  downloadUpload(
+    bucketName: String
+    objectName: String
+  ): File
 }
 `;
 
