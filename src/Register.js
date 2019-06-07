@@ -19,6 +19,7 @@ const REGISTER_MUTATION = gql`
       password: $password
     ) {
       username
+      userID
     }
   }
 `;
@@ -37,7 +38,7 @@ const RegisterSchema = Yup.object().shape({
     .required('Required')
 })
 
-const Register = ({result, setPageKey, setUser, ...props}) => {
+const Register = ({result, setPageKey, setUser, user, ...props}) => {
   const {
     values,
     touched,
@@ -163,6 +164,8 @@ export default R.compose(
   withMutation,
   withFormik({
     enableReinitialize: true,
+    //defaults to generic user so that the first time you run the app you make generic user and can
+    //then authenticate with them each time (set values to '' to remove)
     mapPropsToValues: () => ({ username: 'generic' , password:'user', passwordConfirm:'user'}),
     // Custom sync validation
     validationSchema: RegisterSchema,
@@ -180,7 +183,6 @@ export default R.compose(
       if (isValid){
         await register({variables:{username,password}})
         if (register.data){
-        // console.log('register', register.data.username)
         }
       }
     },

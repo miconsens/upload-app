@@ -148,6 +148,8 @@ export default R.compose(
   withMutation,
   withFormik({
     enableReinitialize: true,
+    //so that you don't have to type in username and password each time, generic user will be made
+    //the first time you register by default...set values to '' when not testing
     mapPropsToValues: () => ({ username:'generic' , password:'user'}),
 
     // Custom sync validation
