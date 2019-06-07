@@ -41,10 +41,10 @@ type Mutation{
     file: Upload!
     userID: ID 
   ): File
-  downloadUpload(
-    bucketName: String
-    objectName: String
-  ): File
+  createPresignedLink(
+    bucketName: ID
+    objectName: ID
+  ): String
 }
 `;
 
