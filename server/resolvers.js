@@ -1,6 +1,5 @@
 const {ApolloError} = require('apollo-server');
 const {minioClient} = require('./minioClient')
-const R= require('ramda');
 
 const resolvers = {
     User: {
@@ -58,8 +57,23 @@ const resolvers = {
             return console.log(err)
           }
           console.log("ETAG", etag)
+          console.log(newUpload)
         })
         return null
+      },
+
+      createPresignedLink: async (parent, {bucketName, objectName}, {Upload}) => {
+        const upload = await Upload.findOne({bucketName, objectName})
+        const {filename} = upload
+        return new Promise((resolve, reject) => {
+          minioClient.presignedGetObject(`${bucketName}`, `${objectName}`, 24*60*60, {
+            'response-content-disposition': `attachment; filename=${filename}`
+          }, function(err, presignedUrl) {
+            if (err) return reject(err)
+            console.log('presignedURL', presignedUrl)
+            resolve(presignedUrl)
+          })
+        })
       }
     },
   };
