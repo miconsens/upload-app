@@ -156,7 +156,6 @@ export default R.compose(
     validationSchema: AuthenticationSchema,
 
     handleSubmit: async ({username,password}, {props: {authenticate}}) => {
-      // console.log('Authentication submit', authenticate, username, password)
       const isValid = await AuthenticationSchema.isValid({
          username,
          password

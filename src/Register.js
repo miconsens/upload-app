@@ -47,7 +47,6 @@ const Register = ({result, setPageKey, setUser, user, ...props}) => {
     handleBlur,
     handleSubmit,
   } = props;
-  // console.log('values', values)
   const isError = R.prop(R.__, errors)
   const isTouched = R.prop(R.__, touched)
   const isInvalid = R.both(isError, isTouched)
@@ -171,13 +170,11 @@ export default R.compose(
     validationSchema: RegisterSchema,
   
     handleSubmit: async ({username,password, passwordConfirm}, {props: {register}}) => {
-      // console.log('Register submit', register, username, password)
       const isValid = await RegisterSchema.isValid({
         username,
         password,
         passwordConfirm
       })
-      // console.log('isValid', isValid)
       //if the user has inputted a valid username and password try to find that username with that password in the db
       //using graphql query 'authenticate'
       if (isValid){
